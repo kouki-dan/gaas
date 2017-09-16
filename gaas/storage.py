@@ -41,9 +41,13 @@ class Storage:
             self.repo.index.add(["README.md"])
             self.repo.index.commit("Initialize repo")
 
-    def add_file(self, filepath):
-        pass
+    def open(self, filepath, mode="r"):
+        return open(self._repo_path(filepath), mode)
 
-    def commit(self):
-        pass
+    def commit(self, filepath_list, message="no message"):
+        self.repo.index.add(filepath_list)
+        self.repo.index.commit(message)
+
+    def _repo_path(self, filepath):
+        return self.repo_dir+"/"+filepath
 
