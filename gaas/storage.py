@@ -1,24 +1,37 @@
 
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 import hashlib
 import os
 
 from git import Repo
+from git.exc import GitCommandError
 
-class AbstractGitCredential:
-    __metaclass__ = ABCMeta
-    pass
+class AbstractGitCredential(metaclass=ABCMeta):
+    
+    @abstractmethod
+    def setup(self):
+        pass
 
 class SSHGitCredential(AbstractGitCredential):
 
-    def __init__(self, public_key):
-        self.public_key = public_key
+    def __init__(self, secret_key):
+        self.secret_key = secret_key
+
+    def setup(self, repo_dir, repo):
+        with open(repo_dir+"/"+"gaas_ssh_key", "w") as f:
+            f.write(self.secret_key)
+        os.chmod(repo_dir+"/"+"gaas_ssh_key", 0o600)
+        repo.git.update_environment(GIT_SSH_COMMAND='ssh -i ./gaas_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes')
 
 class GitCredential:
 
     def __init__(self, credential):
         self.credential = credential
+
+    def setup_repo(self, repo_dir, repo):
+        self.credential.setup(repo_dir, repo)
+
 
     @staticmethod
     def ssh_key(key):
@@ -33,6 +46,15 @@ class Storage:
         except FileExistsError:
             pass
         self.repo = Repo.init(self.repo_dir)
+        git_credential.setup_repo(self.repo_dir, self.repo)
+        try:
+            self.repo.delete_remote("origin")
+        except GitCommandError:
+            pass
+        self.repo.create_remote("origin", repo_url)
+        self.repo.remotes.origin.fetch()
+        # TODO: head to remote/origin/master/head and push initial commit if it is initialized.
+
         if len(self.repo.branches) == 0:
             readme_file = self.repo_dir+"/README.md"
             with open(readme_file, "w") as readme:
