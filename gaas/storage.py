@@ -53,6 +53,8 @@ class Storage:
             pass
         self.repo.create_remote("origin", repo_url)
         self.repo.remotes.origin.fetch()
+        if len(self.repo.remotes.origin.refs) == 0:
+            pass
         # TODO: head to remote/origin/master/head and push initial commit if it is initialized.
 
         if len(self.repo.branches) == 0:
